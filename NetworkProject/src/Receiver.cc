@@ -20,6 +20,7 @@ Define_Module(Receiver);
 
 void Receiver::initialize()
 {
+    send_ack=1;
 }
 
 void Receiver::handleMessage(cMessage *msg)
@@ -27,6 +28,9 @@ void Receiver::handleMessage(cMessage *msg)
     EV<<"Received message from Sender : ";
     EV<<"Received message is:"<< msg->getName();
     msg->setName("ack");
-    send(msg,"outPort");
+    if (send_ack){
+        send(msg,"outPort");
+    }
+
 
 }

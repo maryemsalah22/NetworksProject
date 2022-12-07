@@ -30,6 +30,8 @@ class Sender : public cSimpleModule
   protected:
     virtual void initialize() override;
     virtual void handleMessage(cMessage *msg) override;
+    void send_msg(std::string m);
+    void handle_timeout();
     std::string read_line();
     int increment(int num);
     std::vector<std::string> window;
@@ -37,6 +39,10 @@ class Sender : public cSimpleModule
     int start;
     int end;
     int next_to_send;
+    bool hold_send;
+    bool resend_window;
+    // array of timers for each message sent
+    std::vector<cMessage*> timers;
 
 };
 
