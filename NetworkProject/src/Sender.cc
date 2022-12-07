@@ -18,9 +18,15 @@
 #include <fstream>
 #include "string.h"
 #include <bits/stdc++.h>
+#include "utils.h"
 
 Define_Module(Sender);
 
+void Sender::add_parity(MyMessage_Base* msg){
+    std::string payload = msg->getPayload();
+    int parity = Utils::calculate_parity(payload);
+    msg->setTrailer(parity);
+}
 
 std::string Sender::read_line(){
 
