@@ -28,6 +28,7 @@ class Receiver : public cSimpleModule
   protected:
     virtual void initialize() override;
     virtual void handleMessage(cMessage *msg) override;
+    std::string deframing(std::string framed_msg);
     bool check_parity(MyMessage_Base *mmsg);
     bool send_ack;
 };
