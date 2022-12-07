@@ -38,6 +38,23 @@ std::string Sender::read_line(){
     return "ended";
 }
 
+std::string Sender::framing(std::string plain_msg){
+    std::string framed_msg=plain_msg;
+    int frame_ptr=0;
+
+    for (int i=0;i<plain_msg.size();i++){
+//    add the escape char before any escape char or frame chr in original message
+        if(plain_msg[i]=='$' || plain_msg[i]=='/'){
+            framed_msg=framed_msg.substr(0, frame_ptr)+'/'+framed_msg.substr(frame_ptr,framed_msg.size());
+            frame_ptr+=1;
+        }
+        frame_ptr+=1;
+    }
+//    add the frame char at start and end of the message
+    return  '$'+framed_msg+'$';
+
+}
+
 void Sender::send_msg(std::string m){
     char content[m.length() + 1];
     strcpy(content,m.c_str());
