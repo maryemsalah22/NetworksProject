@@ -15,6 +15,9 @@
 package networkproject;
 simple Receiver
 {
+     parameters:
+        double LP;
+        
     gates:
         input inPort;
         output outPort;
