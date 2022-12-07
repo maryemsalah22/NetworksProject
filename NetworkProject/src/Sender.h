@@ -34,6 +34,7 @@ class Sender : public cSimpleModule
     void send_msg(std::string m);
     void handle_timeout();
     std::string read_line();
+    std::string framing(std::string plain_msg);
     int increment(int num);
     std::vector<std::string> window;
     std::fstream file;
