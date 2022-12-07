@@ -20,6 +20,23 @@
 
 Define_Module(Receiver);
 
+std::string Receiver::deframing(std::string framed_msg){
+
+    std::string plain_msg="";
+    int msg_ptr=1;
+    while(msg_ptr<framed_msg.size()-1){
+        if(framed_msg[msg_ptr]=='/'){
+            msg_ptr++;
+        }
+        plain_msg=plain_msg+framed_msg[msg_ptr];
+        msg_ptr++;
+    }
+
+    std::cout<<framed_msg<<std::endl<<plain_msg<<std::endl;
+    return plain_msg;
+
+}
+
 void Receiver::initialize()
 {
     send_ack=1;
@@ -39,7 +56,10 @@ void Receiver::handleMessage(cMessage *msg)
     EV<<"Received message from Sender : ";
     EV<<"Received message is:"<< msg->getName();
     msg->setName("ack");
-    if (send_ack){
+    bool tosend=(rand()%100)<(1-par("LP").doubleValue())*100;
+
+    if (tosend==true){
+//     if (send_ack){
         send(msg,"outPort");
     }
 
