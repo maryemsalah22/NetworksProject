@@ -17,7 +17,7 @@
 #define __NETWORKPROJECT_RECEIVER_H_
 
 #include <omnetpp.h>
-
+#include "MyMessage_m.h"
 using namespace omnetpp;
 
 /**
@@ -28,6 +28,7 @@ class Receiver : public cSimpleModule
   protected:
     virtual void initialize() override;
     virtual void handleMessage(cMessage *msg) override;
+    bool check_parity(MyMessage_Base *mmsg);
     bool send_ack;
 };
 
