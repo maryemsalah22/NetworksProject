@@ -19,7 +19,7 @@
 #include <omnetpp.h>
 #include <fstream>
 #include "string.h"
-
+#include "MyMessage_m.h"
 using namespace omnetpp;
 
 /**
@@ -30,6 +30,7 @@ class Sender : public cSimpleModule
   protected:
     virtual void initialize() override;
     virtual void handleMessage(cMessage *msg) override;
+    void add_parity(MyMessage_Base* msg);
     void send_msg(std::string m);
     void handle_timeout();
     std::string read_line();
