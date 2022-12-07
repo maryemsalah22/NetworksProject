@@ -15,6 +15,8 @@
 
 #include "Receiver.h"
 #include "math.h"
+#include "utils.h"
+#include <bits/stdc++.h>
 
 Define_Module(Receiver);
 
@@ -23,8 +25,17 @@ void Receiver::initialize()
     send_ack=1;
 }
 
+// Returns true if no error, False if error
+bool Receiver::check_parity(MyMessage_Base *mmsg){
+    int sender_parity = mmsg->getTrailer();
+    int reciever_parity = Utils::calculate_parity(mmsg->getPayload());
+    return sender_parity == reciever_parity;
+}
+
 void Receiver::handleMessage(cMessage *msg)
 {
+//    MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
+//    bool no_error = check_parity(mmsg);
     EV<<"Received message from Sender : ";
     EV<<"Received message is:"<< msg->getName();
     msg->setName("ack");
