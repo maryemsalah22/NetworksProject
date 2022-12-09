@@ -28,7 +28,7 @@ packet MyMessage {
     @customize(true);  // see the generated C++ header for more info
     int header;
     string payload;
-    int frame_type;
+    int frame_type; //0 -> data   1->ACK    2->NACK.
     int ack_number;
     int trailer;
 }

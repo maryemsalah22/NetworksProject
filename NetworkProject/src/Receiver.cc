@@ -39,7 +39,7 @@ std::string Receiver::deframing(std::string framed_msg){
 
 void Receiver::initialize()
 {
-    send_ack=1;
+    expected_frame_num=0;
 }
 
 // Returns true if no error, False if error
@@ -51,17 +51,23 @@ bool Receiver::check_parity(MyMessage_Base *mmsg){
 
 void Receiver::handleMessage(cMessage *msg)
 {
-//    MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
-//    bool no_error = check_parity(mmsg);
-    EV<<"Received message from Sender : ";
-    EV<<"Received message is:"<< msg->getName();
-    msg->setName("ack");
+    MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
+    int seq_num = mmsg->getHeader();
+    if(expected_frame_num != seq_num)
+        return ;
+
+    bool no_error = check_parity(mmsg);
+    deframing(mmsg->getPayload());
+    if(no_error)
+        mmsg->setFrame_type(1);
+    else mmsg->setFrame_type(2);
+
     bool tosend=(rand()%100)<(1-par("LP").doubleValue())*100;
-
-    if (tosend==true){
-//     if (send_ack){
-        send(msg,"outPort");
+    if(tosend==true){
+         mmsg->setAck_number(seq_num);
+         send(mmsg, "outPort");
+         EV<<"Receiver sends ack "<<  seq_num << '\n';
+         expected_frame_num++;
     }
-
-
+    else EV<<"Received loses an ack "<< seq_num << '\n';
 }

@@ -30,17 +30,24 @@ class Sender : public cSimpleModule
   protected:
     virtual void initialize() override;
     virtual void handleMessage(cMessage *msg) override;
-    void add_parity(MyMessage_Base* msg);
-    void send_msg(std::string m);
-    void handle_timeout();
-    std::string read_line();
+    void getErrorCodes(std::string);
+    void addParity(MyMessage_Base* msg);
+    void sendMessage(MyMessage_Base* m);
+    void handleTimeout();
+    void resumeTransmission();
+    MyMessage_Base* readLine();
     std::string framing(std::string plain_msg);
     int increment(int num);
-    std::vector<std::string> window;
+    std::vector<MyMessage_Base*> window;
     std::fstream file;
     int start;
     int end;
     int next_to_send;
+    int seq_num;
+    double PT;
+    double TD;
+    double ED;
+    double DD;
     bool hold_send;
     bool resend_window;
     // array of timers for each message sent

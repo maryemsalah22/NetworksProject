@@ -22,20 +22,39 @@
 
 Define_Module(Sender);
 
-void Sender::add_parity(MyMessage_Base* msg){
+void Sender::addParity(MyMessage_Base* msg){
     std::string payload = msg->getPayload();
     int parity = Utils::calculate_parity(payload);
     msg->setTrailer(parity);
 }
 
-std::string Sender::read_line(){
+void Sender::getErrorCodes(std::string  errors){
+    if(errors[0] == '1')
+        EV<<"Modification error "<< endl ;
+    if(errors[1] == '1')
+            EV<<"loss error"<< endl ;
+    if(errors[2] == '1')
+            EV<<"Duplication error"<< endl ;
+    if(errors[3] == '1')
+            EV<<"Delay error"<< endl ;
 
-    if (this->file.is_open()){ //checking whether the file is open
-        std::string line;
-        if(getline(file, line))
-             return line;
-        }
-    return "ended";
+}
+
+MyMessage_Base* Sender::readLine(){
+    MyMessage_Base* msg = new MyMessage_Base("Noran");
+    std::string line;
+    if(this->file.is_open() && getline(file, line)){//checking whether the file is open and there are lines to be read.
+        getErrorCodes(line.substr(0, 4));
+        std::string framed_msg=framing(line.substr(4));       //do the framing step for the message that has been read.
+        char content[framed_msg.length()+1];        //
+        strcpy(content,framed_msg.c_str());         //string processing
+        msg->setPayload(content);                   //make Payload holds the message after framing
+        msg->setHeader(seq_num);                    //put the message number in the header.
+        seq_num++;
+        addParity(msg);
+        return msg;
+     }
+     return nullptr; //if can't open the file or we reached the end, return nullptr.
 }
 
 std::string Sender::framing(std::string plain_msg){
@@ -43,98 +62,110 @@ std::string Sender::framing(std::string plain_msg){
     int frame_ptr=0;
 
     for (int i=0;i<plain_msg.size();i++){
-//    add the escape char before any escape char or frame chr in original message
+        //add the escape char before any escape char or frame char in original message
         if(plain_msg[i]=='$' || plain_msg[i]=='/'){
             framed_msg=framed_msg.substr(0, frame_ptr)+'/'+framed_msg.substr(frame_ptr,framed_msg.size());
             frame_ptr+=1;
         }
         frame_ptr+=1;
     }
-//    add the frame char at start and end of the message
+    //add the frame char at start and end of the message
     return  '$'+framed_msg+'$';
-
 }
 
-void Sender::send_msg(std::string m){
-    char content[m.length() + 1];
-    strcpy(content,m.c_str());
-    cMessage* msg = new cMessage(content);
-    send(msg,"outPort_rcv");
-    double interval= 4;
-    scheduleAt(simTime()+interval,timers[next_to_send]);
+/* Send a self message to continue transmission. */
+void Sender::resumeTransmission(){
+    double interval = TD;
+    scheduleAt(simTime()+interval,new cMessage("send"));
+}
+
+void Sender::sendMessage(MyMessage_Base* m){
+    if(m == nullptr) return;
+    send(m->dup(),"outPort_rcv");   //send the message(a copy of it to prevent sender & receiver from accessing the same memory location)
+    double interval= 10;
+    scheduleAt(simTime()+interval,timers[next_to_send]);    //start acknowledgement for the sent message.
     next_to_send=increment(next_to_send);
+    resumeTransmission();
 }
 
 
 void Sender::initialize()
 {
     int i=0;
-        file.open("data.txt",std::ios::in);
-        while(i < 5){ //checking whether the file is open
-             window.push_back(read_line());
-             i++;
-        }
-         timers.push_back(new cMessage("0"));
-         timers.push_back(new cMessage("1"));
-         timers.push_back(new cMessage("2"));
-         timers.push_back(new cMessage("3"));
-         timers.push_back(new cMessage("4"));
-        start=0;
-        end=4;
-        hold_send=0;
-        next_to_send=0;
-        send_msg(window[0]);
-        next_to_send=1;
-        EV<<"Hello from sender initialize ,start = "<< start
-                << ",end = "<< end << " next to send = " << next_to_send;
+    file.open("data.txt",std::ios::in);
+    while(i < 5){                       //fill the window with initial N messages.
+        window.push_back(readLine());
+        i++;
+    }
+    timers.push_back(new cMessage("0")); //
+    timers.push_back(new cMessage("1")); //
+    timers.push_back(new cMessage("2")); //create N instances of timers.
+    timers.push_back(new cMessage("3")); //
+    timers.push_back(new cMessage("4")); //
+    start=0;
+    end=4;
+    hold_send=0;
+    next_to_send=0;
+    sendMessage(window[0]);                //send the first message to start communication.
 }
-void Sender::handle_timeout(){
-    for(int i=0 ; i< 5; i++)
-        if(i != start)
+
+
+/*    This function stops upcoming timers and re-send the timed out message and apply the go back N concept     */
+void Sender::handleTimeout(){
+    int i=increment(start);
+    while(i != next_to_send){
+            EV<<"timer "<< i << " is cancelled";
             cancelEvent(timers[i]);
-    next_to_send=start;
-    send_msg(window[next_to_send]);
+            i=increment(i);
+    }
+    next_to_send=start;             //go back N to re-send the timed out message and the next ones.
+    sendMessage(window[next_to_send]);
     hold_send=0;
 }
 
+
+
+/* circular increment to be within the window size. */
 int Sender::increment(int num){
     return (num+1)%5;
 }
 
 void Sender::handleMessage(cMessage *msg)
 {
-    // TODO - Generated method body
-    //after some random time, sender will send a new message to receiver
-    if (msg->isSelfMessage()){
-        if(!strcmp(msg->getName(),"send") ){
-            EV<<"Sender is sending a new message "<< '\n';
-            if(!hold_send){
-               send_msg(window[next_to_send]);
-               if(increment(end) == next_to_send )
-                   hold_send=1;
+
+    if (msg->isSelfMessage()){                      //Sender can receives 2 messages from itself :
+
+        if(!strcmp(msg->getName(),"send") ){        //1) it is a self-timer to send a new message after PT(processing time)
+
+            if(!hold_send){                                 //So, it sends a message if there's a not-sent yet message in the window.
+               EV<<"Sender is sending a new message "<< window[next_to_send]->getPayload()<<'\n';
+               sendMessage(window[next_to_send]);
+               if(increment(end) == next_to_send )          //stop sending temporarily if all messages in the window are sent.
+                   hold_send=1,EV<<"Hold sending... "<< '\n';
             }
         }
-        else{
-            EV<<"first if is invoked";
-            handle_timeout();
+        else{                                       //2) it is a time out timer.
+            EV<<"Timeout! on message "<<  msg->getName()<< endl;
+            handleTimeout();
         }
-        double interval=  exponential(2.0);
-        scheduleAt(simTime()+interval,new cMessage("send"));
     }
     else{
-        EV<<"Sender received an ack "<< '\n';
-        //An ack is received, so :
-        // 1- shift the window to make space for a new message
-        cancelEvent(timers[start]);
-        start= increment(start);
-        end= increment(end);
-        hold_send=0;
-        // 2- read the new message
-        window[end]= read_line();
-        // 3- Send a self dummy message to sender.
-        double interval=  exponential(2.0);
-        scheduleAt(simTime()+interval,new cMessage("send"));
+        //Receives an acknowledgement from receiver :
+        MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
+        EV<<"Sender received an ACK "<<mmsg->getAck_number() << '\n';
+        if(mmsg->getFrame_type() == 1){         //in case of acknowledgement
+            int received_ack = mmsg->getAck_number()%5;
+            if(received_ack == start){          //accept the expected acknowledge only
+                EV<<"Sender deletes ack's timer "<< '\n';
+                cancelEvent(timers[start]);     //cancel the timer of the received acknowledge
+                start = increment(start);       //shift the window
+                end= increment(end);
+                if(window[start] == nullptr)
+                    this->endSimulation();
+                hold_send=0;                    //reset the fold flag as there is a new message will be read from network layer.
+                window[end]= readLine();       //read the new message.
+            }
+        }
     }
-    EV<<"Hello from sender handle ,start = "<< start
-            << ",end = "<< end << " next to send = " << next_to_send;
+    EV<<"Hello from sender handle ,start = "<< start << ",end = "<< end << " next_to_send = " << next_to_send;
 }

@@ -25,7 +25,7 @@ class MyMessage;
  *     \@customize(true);  // see the generated C++ header for more info
  *     int header;
  *     string payload;
- *     int frame_type;
+ *     int frame_type; //0 -> data   1->ACK    2->NACK.
  *     int ack_number;
  *     int trailer;
  * }
@@ -67,7 +67,7 @@ class MyMessage_Base : public ::omnetpp::cPacket
   private:
     void copy(const MyMessage_Base& other);
 
-  protected:
+  public:
     bool operator==(const MyMessage_Base&) = delete;
     // make constructors protected to avoid instantiation
     MyMessage_Base(const char *name=nullptr, short kind=0);
@@ -75,9 +75,10 @@ class MyMessage_Base : public ::omnetpp::cPacket
     // make assignment operator protected to force the user override it
     MyMessage_Base& operator=(const MyMessage_Base& other);
 
-  public:
     virtual ~MyMessage_Base();
-    virtual MyMessage_Base *dup() const override {throw omnetpp::cRuntimeError("You forgot to manually add a dup() function to class MyMessage");}
+    virtual MyMessage_Base *dup() const override {
+        return new MyMessage_Base(*this);
+    }
     virtual void parsimPack(omnetpp::cCommBuffer *b) const override;
     virtual void parsimUnpack(omnetpp::cCommBuffer *b) override;
 

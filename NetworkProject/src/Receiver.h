@@ -30,7 +30,7 @@ class Receiver : public cSimpleModule
     virtual void handleMessage(cMessage *msg) override;
     std::string deframing(std::string framed_msg);
     bool check_parity(MyMessage_Base *mmsg);
-    bool send_ack;
+    int expected_frame_num;
 };
 
 #endif
