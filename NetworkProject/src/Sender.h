@@ -22,6 +22,11 @@
 #include "MyMessage_m.h"
 using namespace omnetpp;
 
+struct message_info{
+    MyMessage_Base* msg;
+    std::string errors;
+};
+
 /**
  * TODO - Generated class
  */
@@ -29,25 +34,35 @@ class Sender : public cSimpleModule
 {
   protected:
     virtual void initialize() override;
+    //Handlers :
     virtual void handleMessage(cMessage *msg) override;
-    void getErrorCodes(std::string);
-    void addParity(MyMessage_Base* msg);
-    void sendMessage(MyMessage_Base* m);
     void handleTimeout();
+    void getErrorCodes(std::string);
+
+    //send messages besed on error type
+    void sendMessage(MyMessage_Base* m, std::string errors);
+    void sendDuplicated(MyMessage_Base* m);
+    void sendModified(MyMessage_Base* m);
+    void sendLost(MyMessage_Base* m);
+    void sendDelayed(MyMessage_Base* m);
+
+    //Timing methods
     void resumeTransmission();
-    MyMessage_Base* readLine();
+    void processTime();
+    message_info* readLine();
+    //
+    void addParity(MyMessage_Base* msg);
     std::string framing(std::string plain_msg);
     int increment(int num);
     std::vector<MyMessage_Base*> window;
+    std::vector<std::string>errors;
     std::fstream file;
     int start;
     int end;
     int next_to_send;
     int seq_num;
-    double PT;
-    double TD;
-    double ED;
-    double DD;
+    MyMessage_Base* duplicatedMsg;
+    MyMessage_Base* delayedMsg;
     bool hold_send;
     bool resend_window;
     // array of timers for each message sent

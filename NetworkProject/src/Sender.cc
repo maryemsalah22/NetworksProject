@@ -37,14 +37,20 @@ void Sender::getErrorCodes(std::string  errors){
             EV<<"Duplication error"<< endl ;
     if(errors[3] == '1')
             EV<<"Delay error"<< endl ;
-
 }
 
-MyMessage_Base* Sender::readLine(){
+/* Send a self message after TP ro simulate processing time. */
+void Sender::processTime(){
+    double interval = 0.5;//par("PT");
+    scheduleAt(simTime()+interval,new cMessage("end processing"));
+}
+
+message_info* Sender::readLine(){
     MyMessage_Base* msg = new MyMessage_Base("Noran");
     std::string line;
+    message_info *msg_container = new message_info();
     if(this->file.is_open() && getline(file, line)){//checking whether the file is open and there are lines to be read.
-        getErrorCodes(line.substr(0, 4));
+        msg_container->errors = line.substr(0, 4);
         std::string framed_msg=framing(line.substr(4));       //do the framing step for the message that has been read.
         char content[framed_msg.length()+1];        //
         strcpy(content,framed_msg.c_str());         //string processing
@@ -52,10 +58,12 @@ MyMessage_Base* Sender::readLine(){
         msg->setHeader(seq_num);                    //put the message number in the header.
         seq_num++;
         addParity(msg);
-        return msg;
+        msg_container->msg=msg;
+        return msg_container;
      }
      return nullptr; //if can't open the file or we reached the end, return nullptr.
 }
+
 
 std::string Sender::framing(std::string plain_msg){
     std::string framed_msg=plain_msg;
@@ -75,38 +83,85 @@ std::string Sender::framing(std::string plain_msg){
 
 /* Send a self message to continue transmission. */
 void Sender::resumeTransmission(){
-    double interval = TD;
+    double interval = 0.1; //par("TD");
     scheduleAt(simTime()+interval,new cMessage("send"));
 }
 
-void Sender::sendMessage(MyMessage_Base* m){
-    if(m == nullptr) return;
-    send(m->dup(),"outPort_rcv");   //send the message(a copy of it to prevent sender & receiver from accessing the same memory location)
+
+void Sender::sendDuplicated(MyMessage_Base* m){
+    /*send(m->dup(),"outPort_rcv");   //send the message(a copy of it to prevent sender & receiver from accessing the same memory location)
     double interval= 10;
     scheduleAt(simTime()+interval,timers[next_to_send]);    //start acknowledgement for the sent message.
+    duplicatedMsg = m ;
+    interval = 0.1; par("DD");
+    scheduleAt(simTime()+interval,new cMessage("Duplicate"));*/
+
+}
+
+void Sender::sendModified(MyMessage_Base* m){
+    /*MyMessage_Base* modified = m->dup();
+    char* new_payload = modified->getPayload();
+    new_payload[0]+=1;
+    modified->setPayload(new_payload);
+    send(modified, "outPort_rcv");*/   //send the message(a copy of it to prevent sender & receiver from accessing the same memory location)
+}
+
+
+void Sender::sendLost(MyMessage_Base* m){
+    //send(m->dup(),"outPort_rcv");   //send the message(a copy of it to prevent sender & receiver from accessing the same memory location)
+    /*double interval= 10;
+    scheduleAt(simTime()+interval,timers[next_to_send]);*/    //start acknowledgement for the sent message.
+}
+
+
+void Sender::sendDelayed(MyMessage_Base* m){
+    /*send(m->dup(),"outPort_rcv");   //send the message(a copy of it to prevent sender & receiver from accessing the same memory location)
+    double interval= 10;
+    scheduleAt(simTime()+interval,timers[next_to_send]);    //start acknowledgement for the sent message.
+
+    delayedMsg = m ;
+    interval = par("ED"); //to be changed to delay time
+    scheduleAt(simTime()+interval,new cMessage("Delayed"));*/
+}
+
+
+void Sender::sendMessage(MyMessage_Base* m, std:: string errors){
+    if(m == nullptr) return;
+    //if(errors[2] == '1')
+        //sendDuplicated(m);
+    MyMessage_Base* copiedMsg = m->dup();
+    send(copiedMsg,"outPort_rcv");   //send the message(a copy of it to prevent sender & receiver from accessing the same memory location)
+
+    double interval= 10; //par("TO");
+    scheduleAt(simTime()+interval,timers[next_to_send]);    //start acknowledgement for the sent message.
     next_to_send=increment(next_to_send);
-    resumeTransmission();
 }
 
 
 void Sender::initialize()
 {
+    EV << "1" << endl;
     int i=0;
     file.open("data.txt",std::ios::in);
-    while(i < 5){                       //fill the window with initial N messages.
-        window.push_back(readLine());
-        i++;
-    }
+    seq_num=0;
+    next_to_send=0;
     timers.push_back(new cMessage("0")); //
     timers.push_back(new cMessage("1")); //
     timers.push_back(new cMessage("2")); //create N instances of timers.
     timers.push_back(new cMessage("3")); //
     timers.push_back(new cMessage("4")); //
+    while(i < 5){                       //fill the window with initial N messages.
+        message_info* read_message = readLine();
+        window.push_back(read_message->msg);
+        errors.push_back(read_message->errors);
+        if(i == 0)
+            sendMessage(window[0], errors[0]); //send the first message to start communication.
+        i++;
+    }
     start=0;
-    end=4;
+    end=4; ;//par("WS")-1;
     hold_send=0;
-    next_to_send=0;
-    sendMessage(window[0]);                //send the first message to start communication.
+
 }
 
 
@@ -119,7 +174,7 @@ void Sender::handleTimeout(){
             i=increment(i);
     }
     next_to_send=start;             //go back N to re-send the timed out message and the next ones.
-    sendMessage(window[next_to_send]);
+    sendMessage(window[next_to_send],errors[next_to_send] );
     hold_send=0;
 }
 
@@ -139,9 +194,10 @@ void Sender::handleMessage(cMessage *msg)
 
             if(!hold_send){                                 //So, it sends a message if there's a not-sent yet message in the window.
                EV<<"Sender is sending a new message "<< window[next_to_send]->getPayload()<<'\n';
-               sendMessage(window[next_to_send]);
+               sendMessage(window[next_to_send],errors[next_to_send]);
                if(increment(end) == next_to_send )          //stop sending temporarily if all messages in the window are sent.
                    hold_send=1,EV<<"Hold sending... "<< '\n';
+               resumeTransmission();
             }
         }
         else{                                       //2) it is a time out timer.
@@ -153,17 +209,21 @@ void Sender::handleMessage(cMessage *msg)
         //Receives an acknowledgement from receiver :
         MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
         EV<<"Sender received an ACK "<<mmsg->getAck_number() << '\n';
-        if(mmsg->getFrame_type() == 1){         //in case of acknowledgement
+        if(mmsg->getFrame_type() == 1){                  //in case of acknowledgement
             int received_ack = mmsg->getAck_number()%5;
-            if(received_ack == start){          //accept the expected acknowledge only
+            if(received_ack == start){                   //accept the expected acknowledge only
                 EV<<"Sender deletes ack's timer "<< '\n';
-                cancelEvent(timers[start]);     //cancel the timer of the received acknowledge
-                start = increment(start);       //shift the window
+                cancelEvent(timers[start]);              //cancel the timer of the received acknowledge
+                start = increment(start);                //shift the window
                 end= increment(end);
                 if(window[start] == nullptr)
                     this->endSimulation();
-                hold_send=0;                    //reset the fold flag as there is a new message will be read from network layer.
-                window[end]= readLine();       //read the new message.
+
+                hold_send=0;                             //reset the fold flag as there is a new message will be read from network layer.
+                message_info* read_message = readLine(); //read the new message.
+                window[end] = read_message->msg;
+                errors[end] = read_message->errors;
+                resumeTransmission();
             }
         }
     }
