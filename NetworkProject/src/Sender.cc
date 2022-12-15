@@ -47,7 +47,7 @@ message_info* Sender::readLine(){
         strcpy(content,framed_msg.c_str());         //string processing
         msg->setPayload(content);                   //make Payload holds the message after framing
         msg->setHeader(seq_num);                    //put the message number in the header.
-        seq_num++;
+        seq_num=increment(seq_num);
         addParity(msg);
         msg_container->msg=msg;
         return msg_container;

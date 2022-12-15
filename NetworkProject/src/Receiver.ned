@@ -16,10 +16,10 @@ package networkproject;
 simple Receiver
 {
      parameters:
-        double LP;
+        double LP = default(0.0);
         double PT = default(0.5);
         double TD = default(1.0); 
-        
+        int WS = default(4);
     gates:
         input inPort;
         output outPort;

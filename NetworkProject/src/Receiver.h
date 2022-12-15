@@ -30,6 +30,7 @@ class Receiver : public cSimpleModule
     virtual void handleMessage(cMessage *msg) override;
     std::string deframing(std::string framed_msg);
     bool check_parity(MyMessage_Base *mmsg);
+    int increment(int num);
 
     int node_number=0;
     int expected_frame_num;

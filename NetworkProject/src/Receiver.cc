@@ -20,6 +20,12 @@
 
 Define_Module(Receiver);
 
+
+/* circular increment to be within the window size. */
+int Receiver::increment(int num){
+    return (num+1)%par("WS").intValue();
+}
+
 std::string Receiver::deframing(std::string framed_msg){
 
     std::string plain_msg="";
@@ -51,6 +57,7 @@ bool Receiver::check_parity(MyMessage_Base *mmsg){
 
 void Receiver::handleMessage(cMessage *msg)
 {
+    EV<<"enter rcv handlemessage"<<endl;
 
     if(msg->isSelfMessage()){
 
@@ -59,36 +66,35 @@ void Receiver::handleMessage(cMessage *msg)
         std::string loss= tosend==1?"NO":"YES";
 
         if(tosend==true) {
-            window->setSchedulingPriority(2);
+//            window->setSchedulingPriority(2);
             cSimpleModule::sendDelayed(this->window,par("TD").doubleValue(),"outPort");
-
         }
 
         EV<<"At time["<<simTime()<<"], Node["<<this->node_number<<"] Sending ["<<contol_type<<"] with number "
             "["<<this->window->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
 
-        expected_frame_num++;
-
     }
-    if (!msg->isSelfMessage()){
-
+    else{
         MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
         int seq_num = mmsg->getHeader();
+        EV<<"expected_frame_num: "<<expected_frame_num<<"seq_num: "<<seq_num<<endl;
         if(expected_frame_num != seq_num)
            return ;
 
         bool no_error = check_parity(mmsg);
-        if(no_error){mmsg->setFrame_type(1);}
+        if(no_error){
+            mmsg->setFrame_type(1);
+            expected_frame_num = increment(expected_frame_num);
+        }
         else {mmsg->setFrame_type(2);}
 
-        mmsg->setAck_number(seq_num);
+        mmsg->setAck_number(expected_frame_num);
 
         this->window=mmsg;
         cMessage *msg=new cMessage("end processing");
-        msg->setSchedulingPriority(1);
+//        msg->setSchedulingPriority(1);
 
         std::string received_msg= deframing(mmsg->getPayload());
-
 
         EV<<"Reciever recieved "<<received_msg<<"\n";
         double interval = par("PT").doubleValue();
