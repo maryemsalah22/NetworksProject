@@ -34,10 +34,12 @@ class Sender : public cSimpleModule
 {
   protected:
     virtual void initialize() override;
+
     //Handlers :
     virtual void handleMessage(cMessage *msg) override;
     void handleTimeout();
     void getErrorCodes(std::string);
+    void fill_initial_window();
 
     //send messages besed on error type
     void sendMessage(MyMessage_Base* m, std::string errors);
@@ -53,6 +55,8 @@ class Sender : public cSimpleModule
     //
     void addParity(MyMessage_Base* msg);
     std::string framing(std::string plain_msg);
+    int node_number=1;
+    double start_time=0;
     int increment(int num);
     std::vector<MyMessage_Base*> window;
     std::vector<std::string>errors;

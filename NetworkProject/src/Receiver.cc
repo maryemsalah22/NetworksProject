@@ -51,23 +51,48 @@ bool Receiver::check_parity(MyMessage_Base *mmsg){
 
 void Receiver::handleMessage(cMessage *msg)
 {
-    MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
-    int seq_num = mmsg->getHeader();
-    if(expected_frame_num != seq_num)
-        return ;
 
-    bool no_error = check_parity(mmsg);
-    deframing(mmsg->getPayload());
-    if(no_error)
-        mmsg->setFrame_type(1);
-    else mmsg->setFrame_type(2);
+    if(msg->isSelfMessage()){
 
-    bool tosend=(rand()%100)<(1-par("LP").doubleValue())*100;
-    if(tosend==true){
-         mmsg->setAck_number(seq_num);
-         send(mmsg, "outPort");
-         EV<<"Receiver sends ack "<<  seq_num << '\n';
-         expected_frame_num++;
+        bool tosend=(rand()%100)<(1-par("LP").doubleValue())*100;
+        std::string contol_type= this->window->getFrame_type()==1?"ACK":"NACK";
+        std::string loss= tosend==1?"NO":"YES";
+
+        if(tosend==true) {
+            window->setSchedulingPriority(2);
+            cSimpleModule::sendDelayed(this->window,par("TD").doubleValue(),"outPort");
+
+        }
+
+        EV<<"At time["<<simTime()<<"], Node["<<this->node_number<<"] Sending ["<<contol_type<<"] with number "
+            "["<<this->window->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
+
+        expected_frame_num++;
+
     }
-    else EV<<"Received loses an ack "<< seq_num << '\n';
+    if (!msg->isSelfMessage()){
+
+        MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
+        int seq_num = mmsg->getHeader();
+        if(expected_frame_num != seq_num)
+           return ;
+
+        bool no_error = check_parity(mmsg);
+        if(no_error){mmsg->setFrame_type(1);}
+        else {mmsg->setFrame_type(2);}
+
+        mmsg->setAck_number(seq_num);
+
+        this->window=mmsg;
+        cMessage *msg=new cMessage("end processing");
+        msg->setSchedulingPriority(1);
+
+        std::string received_msg= deframing(mmsg->getPayload());
+
+
+        EV<<"Reciever recieved "<<received_msg<<"\n";
+        double interval = par("PT").doubleValue();
+        scheduleAt(simTime()+interval,msg);
+
+    }
 }

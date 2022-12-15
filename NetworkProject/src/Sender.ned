@@ -15,6 +15,13 @@
 package networkproject;
 simple Sender
 {
+    parameters:
+        int  WS ;
+        double PT = default(0.5);
+        double TD = default(1.0); 
+        double TO = default(10);
+        double ED = default(4.0);
+        double DD = default(0.1);
     gates:
         input inPort_crd;
         input inPort_rcv;

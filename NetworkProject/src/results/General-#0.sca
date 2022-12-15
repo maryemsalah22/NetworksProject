@@ -1,26 +1,41 @@
 version 3
-run General-0-20221214-09:40:10-51768
+run General-0-20221215-18:33:25-22080
 attr configname General
-attr datetime 20221214-09:40:10
-attr datetimef 20221214-094010
+attr datetime 20221215-18:33:25
+attr datetimef 20221215-183325
 attr experiment General
 attr inifile omnetpp.ini
 attr iterationvars ""
 attr iterationvarsd ""
 attr iterationvarsf ""
 attr measurement ""
-attr network Network
-attr processid 51768
+attr network networkproject.Network
+attr processid 22080
 attr repetition 0
 attr replication #0
 attr resultdir results
 attr runnumber 0
 attr seedset 0
-config network Network
+config network networkproject.Network
+config **.LP 0.0
+config **.WS 4
+config **.PT 0.5
+config **.TD 1.0
+config **.TO 10
+config **.ED 4.0
+config **.DD 0.1
 
 par Network.Sender_Node typename "\"networkproject.Sender\""
+par Network.Sender_Node WS 4
+par Network.Sender_Node PT 0.5
+par Network.Sender_Node TD 1
+par Network.Sender_Node TO 10
+par Network.Sender_Node ED 4
+par Network.Sender_Node DD 0.1
 par Network.Receiver_Node typename "\"networkproject.Receiver\""
-par Network.Receiver_Node LP 0.1
+par Network.Receiver_Node LP 0
+par Network.Receiver_Node PT 0.5
+par Network.Receiver_Node TD 1
 par Network.Coordinator_Node typename "\"networkproject.Coordinator\""
 par Network typename "\"networkproject.Network\""
 

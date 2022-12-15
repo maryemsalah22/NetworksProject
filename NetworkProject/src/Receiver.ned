@@ -17,6 +17,8 @@ simple Receiver
 {
      parameters:
         double LP;
+        double PT = default(0.5);
+        double TD = default(1.0); 
         
     gates:
         input inPort;
