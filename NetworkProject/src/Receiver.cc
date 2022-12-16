@@ -57,27 +57,29 @@ bool Receiver::check_parity(MyMessage_Base *mmsg){
 
 void Receiver::handleMessage(cMessage *msg)
 {
-    EV<<"enter rcv handlemessage"<<endl;
+
+    MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
 
     if(msg->isSelfMessage()){
 
-        bool tosend=(rand()%100)<(1-par("LP").doubleValue())*100;
-        std::string contol_type= this->window->getFrame_type()==1?"ACK":"NACK";
-        std::string loss= tosend==1?"NO":"YES";
+//        bool tosend=(rand()%100)<(1-par("LP").doubleValue())*100;
+        bool tosend=true;
+
+        std::string contol_type= mmsg->getFrame_type()==1?"ACK":"NACK";
+        std::string loss= tosend==true?"NO":"YES";
 
         if(tosend==true) {
-//            window->setSchedulingPriority(2);
-            cSimpleModule::sendDelayed(this->window,par("TD").doubleValue(),"outPort");
+            cSimpleModule::sendDelayed(mmsg,par("TD").doubleValue(),"outPort");
         }
 
         EV<<"At time["<<simTime()<<"], Node["<<this->node_number<<"] Sending ["<<contol_type<<"] with number "
-            "["<<this->window->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
+            "["<<mmsg->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
 
     }
     else{
-        MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
+
         int seq_num = mmsg->getHeader();
-        EV<<"expected_frame_num: "<<expected_frame_num<<"seq_num: "<<seq_num<<endl;
+
         if(expected_frame_num != seq_num)
            return ;
 
@@ -91,14 +93,14 @@ void Receiver::handleMessage(cMessage *msg)
         mmsg->setAck_number(expected_frame_num);
 
         this->window=mmsg;
-        cMessage *msg=new cMessage("end processing");
-//        msg->setSchedulingPriority(1);
+        MyMessage_Base *self_msg=  this->window->dup();
+        msg->setSchedulingPriority(0);
 
         std::string received_msg= deframing(mmsg->getPayload());
 
         EV<<"Reciever recieved "<<received_msg<<"\n";
         double interval = par("PT").doubleValue();
-        scheduleAt(simTime()+interval,msg);
+        scheduleAt(simTime()+interval,self_msg);
 
     }
 }

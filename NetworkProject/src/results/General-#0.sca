@@ -1,8 +1,8 @@
 version 3
-run General-0-20221215-18:33:25-22080
+run General-0-20221216-16:43:04-26428
 attr configname General
-attr datetime 20221215-18:33:25
-attr datetimef 20221215-183325
+attr datetime 20221216-16:43:04
+attr datetimef 20221216-164304
 attr experiment General
 attr inifile omnetpp.ini
 attr iterationvars ""
@@ -10,7 +10,7 @@ attr iterationvarsd ""
 attr iterationvarsf ""
 attr measurement ""
 attr network networkproject.Network
-attr processid 22080
+attr processid 26428
 attr repetition 0
 attr replication #0
 attr resultdir results
@@ -36,6 +36,7 @@ par Network.Receiver_Node typename "\"networkproject.Receiver\""
 par Network.Receiver_Node LP 0
 par Network.Receiver_Node PT 0.5
 par Network.Receiver_Node TD 1
+par Network.Receiver_Node WS 4
 par Network.Coordinator_Node typename "\"networkproject.Coordinator\""
 par Network typename "\"networkproject.Network\""
 
