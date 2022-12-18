@@ -32,12 +32,11 @@ void Sender::addParity(MyMessage_Base* msg){
 void Sender::processTime(){
     double interval = par("PT").doubleValue();
     cMessage *msg=new cMessage("end processing");
-//    msg->setSchedulingPriority(1);
     scheduleAt(simTime()+interval,msg);
 }
 
 message_info* Sender::readLine(){
-    MyMessage_Base* msg = new MyMessage_Base("Noran");
+    MyMessage_Base* msg = new MyMessage_Base("new msg");
     std::string line;
     message_info *msg_container = new message_info();
     if(this->file.is_open() && getline(file, line)){//checking whether the file is open and there are lines to be read.
@@ -50,8 +49,8 @@ message_info* Sender::readLine(){
         seq_num=increment(seq_num);
         addParity(msg);
         msg_container->msg=msg;
-//        EV <<"At Time "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
-//            "with code =["<< msg_container->errors <<"]"<<'\n';
+        EV <<"At Time "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
+            "with code =["<< msg_container->errors <<"]"<<'\n';
 
         return msg_container;
      }
@@ -93,7 +92,11 @@ void Sender::sendMessage(MyMessage_Base* m, std:: string errors){
     if(errors[1]=='0'){
             if (errors[0]=='1'){
                 // adding modification to the payload
-                copiedMsg->setPayload(copiedMsg->getPayload()+1);
+                std::string s(copiedMsg->getPayload());
+                s[0] +=1 ;
+                char const *pchar = s.c_str();
+                copiedMsg->setPayload(pchar);
+                EV<<"modified message  = "<<copiedMsg->getPayload() <<endl ;
             }
             if(errors[3]=='1'){
                 // Handling the delayed case (send after TD+ED)
@@ -159,19 +162,15 @@ void Sender::fill_initial_window(){
        char const *pchar = s.c_str();
        EV<<"this is us = "<<pchar<<"\n";
        timers.push_back(new cMessage(pchar));
-       message_info* read_message = readLine();
-       window.push_back(read_message->msg);
-       errors.push_back(read_message->errors);
+       //fill the window with initial N messages garbage.
+       window.push_back(nullptr);
+       errors.push_back("");
    }
-//   [0 n n n]
-//   end = start
-//   end = start+1
 
-   //fill the window with initial N messages.
-//   message_info* read_message = readLine();
-//   window[0]=read_message->msg;
-//   errors[0]=read_message->errors;
-//   end=start; EDIT THE E
+   message_info* read_message = readLine();
+   window[0]=read_message->msg;
+   errors[0]=read_message->errors;
+   end=start;
 }
 
 /*    This function stops upcoming timers and re-send the timed out message and apply the go back N concept     */
@@ -200,28 +199,32 @@ int Sender::increment(int num){
 
 void Sender::handleMessage(cMessage *msg)
 {
-    EV<<"IN THE SENDER AT "<<simTime()<<"\n";
     if (msg->isSelfMessage()){                      //Sender can receives 3 messages from itself :
 
         if(!strcmp(msg->getName(),"end processing") ){        //1) it is a self-timer to send a new message after PT(processing time)
 
-            if(!hold_send){                                 //So, it sends a message if there's a not-sent yet message in the window.
+            if(!hold_send && window[next_to_send]!= nullptr){                                 //So, it sends a message if there's a not-sent yet message in the window.
 
                sendMessage(window[next_to_send],errors[next_to_send]);
+               int window_size=par("WS").intValue();
+               // if there is space in the buffer to read more , the do
+               // (frame holds elements less than the window size)
+               if ((start+window_size-1)%window_size!=end){
+                   message_info* read_message = readLine();
+                   end= increment(end);
+                   window[end] = read_message->msg;
+                   errors[end] = read_message->errors;
+               }
+
                if(increment(end) == next_to_send )          //stop sending temporarily if all messages in the window are sent.
                    hold_send=1,EV<<"Hold sending... "<< '\n';
                else{
-//                     readline
-                   EV <<"At Time "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
-                        "with code =["<<errors[next_to_send]<<"]"<<'\n';
                    processTime();
                }
             }
         }
         else if (!strcmp(msg->getName(),"start time")){  //2) it is the start of sending after the time start from coordinator
             fill_initial_window();
-            EV <<"At Time "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
-                "with code =["<<errors[next_to_send]<<"]"<<'\n';
             processTime();
         }
         else{                                       //3) it is a time out timer.
@@ -230,7 +233,7 @@ void Sender::handleMessage(cMessage *msg)
         }
     }
     else{
-        //Receives an acknowledgement from receiver :
+        //Receives an acknowledgment from receiver :
         MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
         EV<<"Sender received an ACK "<<mmsg->getAck_number() <<'\n';
         if(mmsg->getFrame_type() == 1){                  //in case of +ve acknowledgement
@@ -238,17 +241,16 @@ void Sender::handleMessage(cMessage *msg)
             if(received_ack == increment(start)){                   //accept the expected acknowledge only
                 EV<<"Sender deletes ack's timer "<< '\n';
                 cancelEvent(timers[start]);              //cancel the timer of the received acknowledge
-                start = increment(start);                //shift the window
-                end= increment(end);
-                if(window[start] == nullptr)
-                    this->endSimulation();
 
                 hold_send=0;                             //reset the fold flag as there is a new message will be read from network layer.
                 message_info* read_message = readLine(); //read the new message.
-                window[end] = read_message->msg;
-                errors[end] = read_message->errors;
-                EV <<"At Time "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
-                   "with code =["<<errors[next_to_send]<<"]"<<'\n';
+                // fill the new line in the start since we have just
+                // recieved +ve ack on it
+                window[start] = read_message != nullptr ? read_message->msg: nullptr ;
+                errors[start] = read_message != nullptr ? read_message->errors: "" ;;
+                start = increment(start);                //shift the window
+                end= increment(end);
+
                 processTime();
             }
         }
@@ -256,9 +258,3 @@ void Sender::handleMessage(cMessage *msg)
     EV<<"Hello from sender handle ,start = "<< start << ",end = "<< end << " next_to_send = " << next_to_send;
 }
 
-
-//readline(){
-// read line
-// print el mo3ida
-// processtime
-//}
