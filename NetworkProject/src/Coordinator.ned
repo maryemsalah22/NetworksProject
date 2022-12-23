@@ -17,5 +17,9 @@ package networkproject;
 simple Coordinator
 {
     gates:
+        // this port so that coordinator can sent the start time and sender's node number
         output outPort_snd;
+        // this port so that coordinator can sent receiver's node number
+        output outPort_snd_rcv;
+        
 }

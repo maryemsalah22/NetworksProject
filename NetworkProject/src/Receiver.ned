@@ -22,5 +22,6 @@ simple Receiver
         int WS = default(4);
     gates:
         input inPort;
+        input inPort_for_coordinator;
         output outPort;
 }

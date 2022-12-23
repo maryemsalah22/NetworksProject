@@ -51,6 +51,8 @@ class Sender : public cSimpleModule
     //Timing methods
     void resumeTransmission();
     void processTime();
+    void finish();
+
     message_info* readLine();
     //
     void addParity(MyMessage_Base* msg);
@@ -61,6 +63,7 @@ class Sender : public cSimpleModule
     std::vector<MyMessage_Base*> window;
     std::vector<std::string>errors;
     std::fstream file;
+    std::ofstream outfile;
     int start;
     int end;
     int next_to_send;

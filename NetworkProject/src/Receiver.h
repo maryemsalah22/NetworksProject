@@ -17,6 +17,7 @@
 #define __NETWORKPROJECT_RECEIVER_H_
 
 #include <omnetpp.h>
+#include <fstream>
 #include "MyMessage_m.h"
 using namespace omnetpp;
 
@@ -27,10 +28,12 @@ class Receiver : public cSimpleModule
 {
   protected:
     virtual void initialize() override;
+    void finish();
     virtual void handleMessage(cMessage *msg) override;
     std::string deframing(std::string framed_msg);
     bool check_parity(MyMessage_Base *mmsg);
     int increment(int num);
+    std::ofstream outfile;
 
     int node_number=0;
     int expected_frame_num;

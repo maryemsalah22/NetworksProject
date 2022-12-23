@@ -46,6 +46,14 @@ std::string Receiver::deframing(std::string framed_msg){
 void Receiver::initialize()
 {
     expected_frame_num=0;
+    // open output file
+    this->outfile = std::ofstream("receiverlogfile.txt");
+}
+
+void Receiver::finish()
+{
+    // close output file
+    this->outfile.close();
 }
 
 // Returns true if no error, False if error
@@ -58,49 +66,59 @@ bool Receiver::check_parity(MyMessage_Base *mmsg){
 void Receiver::handleMessage(cMessage *msg)
 {
 
-    MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
-
-    if(msg->isSelfMessage()){
-
-//        bool tosend=(rand()%100)<(1-par("LP").doubleValue())*100;
-        bool tosend=true;
-
-        std::string contol_type= mmsg->getFrame_type()==1?"ACK":"NACK";
-        std::string loss= tosend==true?"NO":"YES";
-
-        if(tosend==true) {
-            cSimpleModule::sendDelayed(mmsg,par("TD").doubleValue(),"outPort");
-        }
-
-        EV<<"At time["<<simTime()<<"], Node["<<this->node_number<<"] Sending ["<<contol_type<<"] with number "
-            "["<<mmsg->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
-
+    // When the coordinator sends the receiver number.
+    if(std::string(msg->getName()).substr(0, 12) == "coordinator_"){
+        EV<<"At the receiver: "<< msg->getName();
+        // save the node number
+        this->node_number = std::stoi(std::string(msg->getName()).substr(13));
     }
     else{
+        MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
 
-        int seq_num = mmsg->getHeader();
+        if(msg->isSelfMessage()){
 
-        if(expected_frame_num != seq_num)
-           return ;
+            bool tosend=(rand()%100)<((1-par("LP").doubleValue())*100);
+//            bool tosend=true;
 
-        bool no_error = check_parity(mmsg);
-        if(no_error){
-            mmsg->setFrame_type(1);
-            expected_frame_num = increment(expected_frame_num);
+            std::string contol_type= mmsg->getFrame_type()==1?"ACK":"NACK";
+            std::string loss= tosend==true?"NO":"YES";
+
+            if(tosend==true) {
+                cSimpleModule::sendDelayed(mmsg,par("TD").doubleValue(),"outPort");
+            }
+
+            this->outfile<<"At time["<<simTime()<<"], Node["<<this->node_number<<"] Sending ["<<contol_type<<"] with number "
+                    "["<<mmsg->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
+            EV<<"At time["<<simTime()<<"], Node["<<this->node_number<<"] Sending ["<<contol_type<<"] with number "
+                "["<<mmsg->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
+
         }
-        else {mmsg->setFrame_type(2);}
+        else{
 
-        mmsg->setAck_number(expected_frame_num);
+            int seq_num = mmsg->getHeader();
 
-        this->window=mmsg;
-        MyMessage_Base *self_msg=  this->window->dup();
-        msg->setSchedulingPriority(0);
+            if(expected_frame_num != seq_num)
+               return ;
 
-        std::string received_msg= deframing(mmsg->getPayload());
+            bool no_error = check_parity(mmsg);
+            if(no_error){
+                mmsg->setFrame_type(1);
+                expected_frame_num = increment(expected_frame_num);
+            }
+            else {mmsg->setFrame_type(2);}
 
-        EV<<"Reciever recieved "<<received_msg<<"\n";
-        double interval = par("PT").doubleValue();
-        scheduleAt(simTime()+interval,self_msg);
+            mmsg->setAck_number(expected_frame_num);
 
+            this->window=mmsg;
+            MyMessage_Base *self_msg=  this->window->dup();
+            msg->setSchedulingPriority(0);
+
+            std::string received_msg= deframing(mmsg->getPayload());
+
+            EV<<"Receiver received "<<received_msg<<"\n"; //DELETE
+            double interval = par("PT").doubleValue();
+            scheduleAt(simTime()+interval,self_msg);
+
+        }
     }
 }
