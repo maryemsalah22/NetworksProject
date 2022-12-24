@@ -81,16 +81,16 @@ void Receiver::handleMessage(cMessage *msg)
 //            bool tosend=true;
 
             std::string contol_type= mmsg->getFrame_type()==1?"ACK":"NACK";
-            std::string loss= tosend==true?"NO":"YES";
+            std::string loss= tosend==true?"No":"Yes";
 
             if(tosend==true) {
                 cSimpleModule::sendDelayed(mmsg,par("TD").doubleValue(),"outPort");
             }
 
             this->outfile<<"At time["<<simTime()<<"], Node["<<this->node_number<<"] Sending ["<<contol_type<<"] with number "
-                    "["<<mmsg->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
+                    "["<<mmsg->getAck_number()<<"] , loss ["<<loss<<"]"<<"\n";
             EV<<"At time["<<simTime()<<"], Node["<<this->node_number<<"] Sending ["<<contol_type<<"] with number "
-                "["<<mmsg->getAck_number()<<"] , Loss ["<<loss<<"]"<<"\n";
+                "["<<mmsg->getAck_number()<<"] , loss ["<<loss<<"]"<<"\n";
 
         }
         else{

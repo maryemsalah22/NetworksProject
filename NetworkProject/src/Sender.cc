@@ -50,9 +50,9 @@ message_info* Sender::readLine(){
         addParity(msg);
         msg_container->msg=msg;
 
-        this->outfile<<"At Time "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
+        this->outfile<<"At "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
                 "with code =["<< msg_container->errors <<"]"<<'\n';
-        EV <<"At Time "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
+        EV <<"At "<<simTime()<<" Node["<<this->node_number<<"] Introducing channel error"
             "with code =["<< msg_container->errors <<"]"<<'\n';
 
         return msg_container;
@@ -116,15 +116,15 @@ void Sender::sendMessage(MyMessage_Base* m, std:: string errors){
 
                 // time to send duplicate message
                 channel_time+= par("DD").doubleValue();
-                this->outfile<<"At time ["<<simTime()<<"] Node["<<this->node_number<<"] [send] frame with seq_num=["<<copiedMsg2->getHeader()<<"] "
+                this->outfile<<"At time ["<<simTime()<<"], Node["<<this->node_number<<"] [send] frame with seq_num=["<<copiedMsg2->getHeader()<<"] "
                         "and payload =["<<copiedMsg2->getPayload()<<"] and trailer=["<<std::bitset<8>(std::to_string(copiedMsg2->getTrailer()))<<"]"
                         " , Modified ["<<modified<<"],"
-                        "Lost ["<<Lost<<"]  Duplicate [1], Delay ["<<delay<<"]"<<"\n";
+                        "Lost ["<<Lost<<"],  Duplicate [1], Delay ["<<delay<<"]"<<"\n";
 
-                EV<<"At time ["<<simTime()<<"] Node["<<this->node_number<<"] [send] frame with seq_num=["<<copiedMsg2->getHeader()<<"] "
+                EV<<"At time ["<<simTime()<<"], Node["<<this->node_number<<"] [send] frame with seq_num=["<<copiedMsg2->getHeader()<<"] "
                      "and payload =["<<copiedMsg2->getPayload()<<"] and trailer=["<<std::bitset<8>(std::to_string(copiedMsg2->getTrailer()))<<"]"
                      " , Modified ["<<modified<<"],"
-                     "Lost ["<<Lost<<"]  Duplicate [1], Delay ["<<delay<<"]"<<"\n";
+                     "Lost ["<<Lost<<"],  Duplicate [1], Delay ["<<delay<<"]"<<"\n";
 
           }
 
@@ -142,11 +142,11 @@ void Sender::sendMessage(MyMessage_Base* m, std:: string errors){
     this->outfile<<"At time ["<<sent_time<<"] Node["<<this->node_number<<"] [send] frame with seq_num=["<<copiedMsg->getHeader()<<"] "
             "and payload =["<<copiedMsg->getPayload()<<"] and trailer=["<<std::bitset<8>(std::to_string(copiedMsg->getTrailer()))<<"]"
             " , Modified ["<<modified<<"],"
-            "Lost ["<<Lost<<"]  Duplicate ["<<duplicate<<"], Delay ["<<delay<<"]"<<"\n";
+            "Lost ["<<Lost<<"],  Duplicate ["<<duplicate<<"], Delay ["<<delay<<"]"<<"\n";
     EV<<"At time ["<<sent_time<<"] Node["<<this->node_number<<"] [send] frame with seq_num=["<<copiedMsg->getHeader()<<"] "
         "and payload =["<<copiedMsg->getPayload()<<"] and trailer=["<<std::bitset<8>(std::to_string(copiedMsg->getTrailer()))<<"]"
         " , Modified ["<<modified<<"],"
-        "Lost ["<<Lost<<"]  Duplicate ["<<duplicate<<"], Delay ["<<delay<<"]"<<"\n";
+        "Lost ["<<Lost<<"],  Duplicate ["<<duplicate<<"], Delay ["<<delay<<"]"<<"\n";
 
     // Setting timer on 1 even in case of duplication
     double interval=par("TO").doubleValue();
