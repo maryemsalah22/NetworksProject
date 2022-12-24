@@ -51,7 +51,7 @@ class Sender : public cSimpleModule
     //Timing methods
     void resumeTransmission();
     void processTime();
-    void finish();
+    void finish() override;
 
     message_info* readLine();
     //

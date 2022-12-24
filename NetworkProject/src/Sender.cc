@@ -99,7 +99,7 @@ void Sender::sendMessage(MyMessage_Base* m, std:: string errors){
                 s[0] +=1 ; // we assume that this +1 modification will change a single bit and thus the error will be detected at the receiver by the parity.
                 char const *pchar = s.c_str();
                 copiedMsg->setPayload(pchar);
-                EV<<"modified message  = "<<copiedMsg->getPayload() <<endl ; //DELETE
+
             }
             if(errors[3]=='1'){
                 // Handling the delayed case (send after TD+ED)
@@ -150,7 +150,6 @@ void Sender::sendMessage(MyMessage_Base* m, std:: string errors){
 
     // Setting timer on 1 even in case of duplication
     double interval=par("TO").doubleValue();
-    EV<<"Waiting for timeout on msg ="<<this->next_to_send<<"at time ="<<simTime()+interval<<"\n"; //DELETE
     scheduleAt(simTime()+interval,timers[next_to_send]);    //start timer for the sent message.
 
     next_to_send=increment(next_to_send);
@@ -190,7 +189,6 @@ void Sender::fill_initial_window(){
        std::string s = std::to_string(j);
        char const *pchar = s.c_str();
 
-       EV<<"this is us = "<<pchar<<"\n"; //DELETE
        timers.push_back(new cMessage(pchar));
        //fill the window with initial N messages garbage.
        window.push_back(nullptr);
@@ -211,7 +209,6 @@ void Sender::handleTimeout(){
 
     int i=increment(start);
     while(i != next_to_send){
-            EV<<"timer "<< i << " is cancelled";
             cancelEvent(timers[i]);
             i=increment(i);
     }
@@ -239,7 +236,6 @@ void Sender::handleMessage(cMessage *msg)
             // then it's the start time message
             if (std::string(msg->getName())[12]=='s'){
 
-                EV<< msg->getName();
                 this->start_time = std::stod(std::string(msg->getName()).substr(13));
 
                 // schedule a self message to start at the start time of the communication.
@@ -269,7 +265,7 @@ void Sender::handleMessage(cMessage *msg)
                }
 
                if(increment(end) == next_to_send )          //stop sending temporarily if all messages in the window are sent.
-                   hold_send=1,EV<<"Hold sending... "<< '\n';
+                   hold_send=1;
                else{
                    processTime();
                }
@@ -281,19 +277,16 @@ void Sender::handleMessage(cMessage *msg)
             processTime();
         }
         else{                                       //3) it is a time out timer.
-            EV<<"Timeout! on message "<<  msg->getName()<< endl; //DELETE
             handleTimeout();
         }
     }
     else{
         //Receives an acknowledgment from receiver :
         MyMessage_Base *mmsg = check_and_cast<MyMessage_Base *>(msg);
-        EV<<"Sender received an ACK "<<mmsg->getAck_number() <<'\n';
         if(mmsg->getFrame_type() == 1){                  //in case of +ve acknowledgement
             int received_ack = mmsg->getAck_number()%par("WS").intValue();
             if(received_ack == increment(start)){                   //accept the expected acknowledge only
 
-                EV<<"Sender deletes ack's timer "<< '\n'; //DELETE
                 cancelEvent(timers[start]);              //cancel the timer of the received acknowledge
 
                 hold_send=0;                             //reset the fold flag as there is a new message will be read from network layer.
@@ -309,6 +302,6 @@ void Sender::handleMessage(cMessage *msg)
             }
         }
     }
-    EV<<"Hello from sender handle ,start = "<< start << ",end = "<< end << " next_to_send = " << next_to_send; //DELETE
+
 }
 

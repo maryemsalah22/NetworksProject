@@ -68,7 +68,7 @@ void Receiver::handleMessage(cMessage *msg)
 
     // When the coordinator sends the receiver number.
     if(std::string(msg->getName()).substr(0, 12) == "coordinator_"){
-        EV<<"At the receiver: "<< msg->getName();
+
         // save the node number
         this->node_number = std::stoi(std::string(msg->getName()).substr(13));
     }
@@ -115,7 +115,6 @@ void Receiver::handleMessage(cMessage *msg)
 
             std::string received_msg= deframing(mmsg->getPayload());
 
-            EV<<"Receiver received "<<received_msg<<"\n"; //DELETE
             double interval = par("PT").doubleValue();
             scheduleAt(simTime()+interval,self_msg);
 
